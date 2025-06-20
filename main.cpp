@@ -1,25 +1,22 @@
 #include "main.h"
-#include <QCoreApplication>
-#include <QTextStream>
-#include <QTextCodec>
-
+#include "test_algoritmdejcstra.h"
+#include "test_createdotwithpath.h"
+#include "test_defininggraphbysiegematrix.h"
 
 
 int main(int argc, char *argv[]) {
     //QCoreApplication app(argc, argv);
 
     // Вывод русского языка в консоль
-    QTextStream outStream(stdout);
-    outStream.setCodec(QTextCodec::codecForName("cp866"));
-
+    QTextCodec::setCodecForLocale(QTextCodec::codecForName("CP866"));
 
     QVector<Error> errors;
     //C:/Users/pc/Desktop/FindShortestPath/test.dot
     //C:/Users/pc/Desktop/FindShortestPath/output.dot
 
-
+/*
     // Чтение входного файла
-    outStream << QString("Введите путь к входному файлу:\n") << flush;
+    qDebug() << "Введите путь к входному файлу:\n";
     QString inputPath;
     QTextStream in(stdin);
     inputPath = in.readLine();
@@ -27,7 +24,7 @@ int main(int argc, char *argv[]) {
     QStringList lines;
     QFile inputFile(inputPath);
     if (!inputFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        outStream << QString("Ошибка: не удалось открыть файл ") << inputPath << "\n";
+        qDebug() << QString("Ошибка: не удалось открыть файл ") << inputPath << "\n";
         return 1;
     }
 
@@ -41,15 +38,15 @@ int main(int argc, char *argv[]) {
     // Построение матрицы смежности
     QMap<char, QMap<char, int>> siegeMatrix;
     if (!definingGraphBysiegeMatrix(siegeMatrix, lines, errors)) {
-        outStream << QString("Ошибка при построении матрицы смежности\n");
+        qDebug() << QString("Ошибка при построении матрицы смежности\n");
         return 1;
     }
 
     // Ввод вершин для поиска пути
-    outStream << QString("Введите начальную и конечную вершины (через пробел): ") << flush;
+    qDebug() << QString("Введите начальную и конечную вершины (через пробел): ") << flush;
     QStringList vertices = in.readLine().split(' ');
     if (vertices.size() < 2) {
-        outStream << QString("Необходимо указать две вершины\n");
+        qDebug() << QString("Необходимо указать две вершины\n");
         return 1;
     }
 
@@ -57,7 +54,7 @@ int main(int argc, char *argv[]) {
     int distance = algoritmDejcstra(siegeMatrix, path);
 
     if (distance == -1) {
-        outStream << QString("Путь между вершинами не найден\n");
+        qDebug() << QString("Путь между вершинами не найден\n");
         return 1;
     }
 
@@ -65,12 +62,12 @@ int main(int argc, char *argv[]) {
     QString dotCode = createDotWithPath(siegeMatrix, distance, path);
 
     // Сохранение в выходной файл
-    outStream << QString("Введите путь для сохранения выходного DOT-файла: ") << flush;
+    qDebug() << QString("Введите путь для сохранения выходного DOT-файла: ") << flush;
     QString outputPath = in.readLine();
 
     QFile outputFile(outputPath);
     if (!outputFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        outStream << QString("Ошибка: не удалось создать файл ") << outputPath << "\n";
+        qDebug() << QString("Ошибка: не удалось создать файл ") << outputPath << "\n";
         return 1;
     }
 
@@ -78,13 +75,18 @@ int main(int argc, char *argv[]) {
     outputStream << dotCode;
     outputFile.close();
 
-    outStream << QString("Граф с выделенным путём успешно сохранён в ") << outputPath << "\n";
-    outStream << QString("Кратчайшее расстояние: ") << distance << "\n";
-    outStream << QString("Путь: ");
+    qDebug() << QString("Граф с выделенным путём успешно сохранён в ") << outputPath << "\n";
+    qDebug() << QString("Кратчайшее расстояние: ") << distance << "\n";
+    qDebug() << QString("Путь: ");
     for (char vertex : path) {
-        outStream << vertex << " ";
+        qDebug() << vertex << " ";
     }
-    outStream << "\n";
+    qDebug() << "\n";
+*/
+    //Вернуть успешность завершения функции
+    QTest::qExec(new TestDijkstraAlgorithm,argc,argv);
+    QTest::qExec(new TestCreateDotWithPath,argc,argv);
+    QTest::qExec(new TestGraphParser,argc,argv);
 
     return 0;
 
@@ -289,33 +291,32 @@ bool definingGraphBysiegeMatrix(QMap<char, QMap<char, int>>& siegeMatrix,
 }
 
 int algoritmDejcstra(const QMap<char, QMap<char, int>>& siegeMatrix, QVector<char>& path) {
-    // Проверяем, что в path есть начальная и конечная вершины
-    if (path.size() < 2) {
-        qDebug() << "Ошибка: в path должны быть начальный и конечный город";
-        return -1;
-    }
 
-    char start = path[0];  // Начальный город
-    char end = path[1];    // Конечный город
-    path.clear();          // Очищаем для заполнения новым путём
+    char start = path[0];
+    char end = path[1];
+    path.clear();
 
     // Инициализация структур данных
-    QMap<char, int> distances;          // Кратчайшие расстояния до вершин
-    QMap<char, char> previous;          // Предыдущие вершины для восстановления пути
-    QSet<char> visited;                 // Посещённые вершины
-    QList<char> allVertices;            // Все вершины графа
+    QMap<char, int> distances;
+    QMap<char, char> previous;
+    QSet<char> visited;
+    QSet<char> allVertices;  // Используем QSet для автоматического избегания дубликатов
 
     // Собираем все вершины графа
-    for (auto it = siegeMatrix.begin(); it != siegeMatrix.end(); ++it) {
-        allVertices.append(it.key());
-        for (auto neighbor = it.value().begin(); neighbor != it.value().end(); ++neighbor) {
-            if (!allVertices.contains(neighbor.key())) {
-                allVertices.append(neighbor.key());
-            }
+    for (auto it = siegeMatrix.constBegin(); it != siegeMatrix.constEnd(); ++it) {
+        allVertices.insert(it.key());
+        for (auto neighbor = it.value().constBegin(); neighbor != it.value().constEnd(); ++neighbor) {
+            allVertices.insert(neighbor.key());
         }
     }
 
-    // Инициализируем расстояния (бесконечность для всех, кроме старта)
+    // Проверка существования вершин в графе
+    if (!allVertices.contains(start) || !allVertices.contains(end)) {
+        qDebug() << "Один из городов отсутствует в графе";
+        return -1;
+    }
+
+    // Инициализация расстояний
     for (char vertex : allVertices) {
         distances[vertex] = std::numeric_limits<int>::max();
     }
@@ -323,10 +324,10 @@ int algoritmDejcstra(const QMap<char, QMap<char, int>>& siegeMatrix, QVector<cha
 
     // Основной цикл алгоритма
     while (true) {
-        // Находим непосещённую вершину с минимальным расстоянием
         char current = '\0';
         int minDistance = std::numeric_limits<int>::max();
 
+        // Поиск непосещенной вершины с минимальным расстоянием
         for (char vertex : allVertices) {
             if (!visited.contains(vertex) && distances[vertex] < minDistance) {
                 minDistance = distances[vertex];
@@ -334,21 +335,23 @@ int algoritmDejcstra(const QMap<char, QMap<char, int>>& siegeMatrix, QVector<cha
             }
         }
 
-        // Если все вершины посещены или недостижимы
-        if (current == '\0' || current == end) {
+        // Условия выхода из цикла
+        if (current == '\0') {
+            qDebug() << "Невозможно достичь города" << end << "из города" << start;
+            return -1;
+        }
+        if (current == end) {
             break;
         }
 
         visited.insert(current);
 
-        // Обновляем расстояния до соседей
+        // Обновление расстояний до соседей
         if (siegeMatrix.contains(current)) {
-            for (auto neighbor = siegeMatrix[current].begin(); neighbor != siegeMatrix[current].end(); ++neighbor) {
+            for (auto neighbor = siegeMatrix[current].constBegin(); neighbor != siegeMatrix[current].constEnd(); ++neighbor) {
                 char next = neighbor.key();
-                int edgeWeight = neighbor.value();
-
                 if (!visited.contains(next)) {
-                    int newDistance = distances[current] + edgeWeight;
+                    int newDistance = distances[current] + neighbor.value();
                     if (newDistance < distances[next]) {
                         distances[next] = newDistance;
                         previous[next] = current;
@@ -358,60 +361,39 @@ int algoritmDejcstra(const QMap<char, QMap<char, int>>& siegeMatrix, QVector<cha
         }
     }
 
-    // Восстанавливаем путь, если он существует
-    if (distances[end] == std::numeric_limits<int>::max()) {
-        qDebug() << "Пути между" << start << "и" << end << "не существует";
-        return -1;
-    }
-
-    // Восстановление пути от конца к началу
+    // Восстановление пути
     char current = end;
     while (current != start) {
+        if (!previous.contains(current)) {
+            qDebug() << "Путь прерван - отсутствует связь между городами";
+            return -1;
+        }
         path.prepend(current);
         current = previous[current];
     }
     path.prepend(start);
 
-    // Возвращаем длину пути (сумму весов рёбер)
     return distances[end];
 }
 
 QString createDotWithPath(QMap<char, QMap<char, int>>& siegeMatrix, int value, QVector<char>& path) {
     QString dotString = "digraph G {\n";
 
-    // 1. Добавляем все рёбра графа (серым цветом)
-    for (auto it = siegeMatrix.begin(); it != siegeMatrix.end(); ++it) {
-        char from = it.key();
-        for (auto edge = it.value().begin(); edge != it.value().end(); ++edge) {
-            char to = edge.key();
-            int weight = edge.value();
+    // Добавляем только рёбра из кратчайшего пути
+    for (int i = 0; i < path.size() - 1; ++i) {
+        char from = path[i];
+        char to = path[i + 1];
 
-            // Проверяем, является ли это ребро частью кратчайшего пути
-            bool isPathEdge = false;
-            for (int i = 0; i < path.size() - 1; i++) {
-                if (path[i] == from && path[i+1] == to) {
-                    isPathEdge = true;
-                    break;
-                }
-            }
-
-            if (isPathEdge) {
-                // 2. Выделяем рёбра кратчайшего пути (красным цветом)
-                dotString += QString("    %1 -> %2 [label=\"%3\", color=\"red\", penwidth=2.0];\n")
-                                 .arg(from).arg(to).arg(weight);
-            } else {
-                // Обычные рёбра (серым цветом)
-                dotString += QString("    %1 -> %2 [label=\"%3\", color=\"gray\"];\n")
-                                 .arg(from).arg(to).arg(weight);
-            }
+        if (siegeMatrix.contains(from) && siegeMatrix[from].contains(to)) {
+            int weight = siegeMatrix[from][to];
+            dotString += QString("    %1 -> %2 [label = %3]\n")
+                             .arg(from).arg(to).arg(weight);
         }
     }
 
-    // 3. Добавляем подпись с длиной кратчайшего пути
-    if (path.size() >= 2) {
-        dotString += QString("    label=\"Кратчайшее расстояние между %1 и %2 равно %3\";\n")
-                         .arg(path.first()).arg(path.last()).arg(value);
-    }
+    // Добавляем подпись с длиной пути
+    dotString += QString("    label = \"Кратчайшее расстояние: %1\"\n")
+                     .arg(value);
 
     dotString += "}";
 
