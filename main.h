@@ -9,7 +9,6 @@
 #include <iostream>
 #include <QCoreApplication>
 #include <QTextStream>
-#include <QTextCodec>
 #include <limits>
 #include <algorithm>
 #include <QtTest/QtTest>
@@ -31,6 +30,7 @@ enum type_error {
 
 struct Error
 {
+
     enum type_error type;
     QString stringValue;
     int position_error;
