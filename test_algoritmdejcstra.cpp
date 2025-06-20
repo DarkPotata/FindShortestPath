@@ -37,7 +37,7 @@ void TestDijkstraAlgorithm::testMinimalGraph()
 
 void TestDijkstraAlgorithm::testMultiplePathsSelectShortest()
 {
-    /* Тест 3: Несколько путей, выбор кратчайшего */
+    /* Тест 3: Несколько путей, выбор любого кратчайшего */
     QVector<char> cities = {'A', 'B', 'C', 'D', 'F', 'Q'};
     QVector<QVector<int>> matrixData = {
         {-1, 5, 15, 6, 5, 10},
@@ -53,8 +53,28 @@ void TestDijkstraAlgorithm::testMultiplePathsSelectShortest()
 
     int distance = algoritmDejcstra(siegeMatrix, path);
 
+    // Все возможные кратчайшие пути с длиной 10
+    QVector<QVector<char>> validPaths = {
+        {'A', 'B', 'C', 'Q'},  // 5 + 2 + 3 = 10
+        {'A', 'F', 'Q'},         // 5 + 5 = 10
+        {'A', 'Q'}               // 10
+    };
+
+    // Проверяем длину пути
     QCOMPARE(distance, 10);
-    QCOMPARE(path, QVector<char>({'A', 'B', 'C', 'Q'}));
+
+    // Проверяем, что найденный путь есть среди допустимых
+    bool pathIsValid = false;
+    for (const auto& validPath : validPaths) {
+        if (path == validPath) {
+            pathIsValid = true;
+            break;
+        }
+    }
+
+    QVERIFY2(pathIsValid, "Найденный путь не является одним из кратчайших");
+
+
 }
 
 void TestDijkstraAlgorithm::testNoPathExists()
@@ -94,10 +114,10 @@ void TestDijkstraAlgorithm::testGraphWithCycles()
     /* Тест 6: В графе есть циклы */
     QVector<char> cities = {'A', 'B', 'C', 'D'};
     QVector<QVector<int>> matrixData = {
-        {-1, 2, -1, -1},
-        {-1, -1, 3, -1},
-        {4, -1, -1, 1},
-        {-1, -1, -1, -1}
+        {-1, 4, -1, -1},
+        {-1, -1, 1, -1},
+        {-1, -1, -1, 3},
+        {3, -1, -1, -1}
     };
 
     auto siegeMatrix = createTestMatrix(matrixData, cities);
