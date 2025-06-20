@@ -35,6 +35,12 @@ struct Error
     QString stringValue;
     int position_error;
 
+
+    Error(type_error t, const QString& msg, int pos) :
+        type(t), stringValue(msg), position_error(pos) {}
+
+
+
     QString toString() const {
         QString errorType;
         switch(type) {
@@ -65,7 +71,9 @@ struct Error
 };
 
 
-bool definingGraphBysiegeMatrix(QMap<char, QMap<char, int>>& siegeMatrix, QStringList& dotRecord);
+bool definingGraphBysiegeMatrix(QMap<char, QMap<char, int>>& siegeMatrix, const QStringList& dotRecord, QVector<Error>& errors);
 int algoritmDejcstra(const QMap<char, QMap<char, int>>& siegeMatrix, QVector<char>& path);
 QString createDotWithPath(QMap<char, QMap<char, int>>& siegeMatrix, int value, QVector<char> & path);
+void printAdjacencyMatrix(const QMap<char, QMap<char, int>> &siegeMatrix);
 
+QString errorTypeToString(type_error type);
