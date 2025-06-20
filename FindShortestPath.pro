@@ -22,9 +22,9 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
         test_algoritmdejcstra.cpp \
-        main.cpp \
         test_createdotwithpath.cpp \
-        test_defininggraphbysiegematrix.cpp
+        test_defininggraphbysiegematrix.cpp \
+        main.cpp \
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -33,6 +33,7 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 HEADERS += \
     test_algoritmdejcstra.h \
-    main.h \
     test_createdotwithpath.h \
-    test_defininggraphbysiegematrix.h
+    test_defininggraphbysiegematrix.h \
+    main.h
+
