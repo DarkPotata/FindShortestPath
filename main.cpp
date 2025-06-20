@@ -94,7 +94,52 @@ int main(int argc, char *argv[]) {
 
 bool definingGraphBysiegeMatrix(QMap<char, QMap<char, int>> & siegeMatrix, QStringList & dotRecord) {
 
-    
+    // Очищаем матрицу смежности, чтобы начать с чистого листа.
+        siegeMatrix.clear();
+
+        // Обрабатываем строки dotRecord.
+        for (const QString & line : dotRecord) {
+            // Игнорируем пустые строки и строки, не содержащие ребер.
+            if (line.isEmpty() || !line.contains("->")) {
+                continue;
+            }
+
+            // Извлекаем информацию о ребре с помощью регулярных выражений.
+            QRegExp rx("([A-Za-z0-9]+)\\s*->\\s*([A-Za-z0-9]+)\\s*\\[label\\s*=\\s*(\\d+)\\]");
+            int pos = 0;
+
+            while ((pos = rx.indexIn(line, pos)) != -1) {
+                QString fromStr = rx.cap(1);
+                QString toStr = rx.cap(2);
+                QString weightStr = rx.cap(3);
+
+                // Проверяем, что извлеченные строки не пусты.
+                if (fromStr.isEmpty() || toStr.isEmpty() || weightStr.isEmpty()) {
+                    qDebug() << "Ошибка: Неверный формат строки: " << line;
+                    return false; // Или обработайте ошибку по-другому.
+                }
+
+                // Преобразуем строки в соответствующие типы данных.
+                char from = fromStr.at(0).toLatin1();
+                char to = toStr.at(0).toLatin1();
+                int weight = weightStr.toInt();
+
+                // Проверяем, что преобразование прошло успешно.
+                if (weight == 0 && weightStr != "0") {  // Проверка на ошибку int.
+                    qDebug() << "Ошибка: Неверный формат веса в строке: " << line;
+                    return false; // Или обработайте ошибку по-другому.
+                }
+
+                // Заполняем матрицу смежности.
+                if (!siegeMatrix.contains(from)) {
+                    siegeMatrix.insert(from, QMap<char, int>());
+                }
+                siegeMatrix[from].insert(to, weight);
+                pos += rx.matchedLength();
+            }
+        }
+
+        return true;
 }
 
 int algoritmDejcstra(const QMap<char, QMap<char, int>>& siegeMatrix, QVector<char>& path) {
