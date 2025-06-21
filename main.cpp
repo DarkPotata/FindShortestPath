@@ -4,93 +4,121 @@
 #include "test_defininggraphbysiegematrix.h"
 
 
+#ifdef Q_OS_WIN
+#include <windows.h>
+#endif
+
 int main(int argc, char *argv[]) {
-    //QCoreApplication app(argc, argv);
+// Настройка кодировки для Windows
+#ifdef Q_OS_WIN
+    SetConsoleOutputCP(CP_UTF8);
+#endif
+    QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF-8"));
 
-    // Вывод русского языка в консоль
-    QTextCodec::setCodecForLocale(QTextCodec::codecForName("CP866"));
+    // Режим работы с файлами (если передано 2 аргумента)
+    if (argc == 3) {
+        QString inputPath = argv[1];
+        QString outputPath = argv[2];
+        QVector<Error> errors;
 
-    QVector<Error> errors;
-    //C:/Users/pc/Desktop/FindShortestPath/test.dot
-    //C:/Users/pc/Desktop/FindShortestPath/output.dot
+        // Чтение и обработка графа
+        QStringList lines;
+        QFile inputFile(inputPath);
+        if (!inputFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            qDebug() << "Ошибка: не удалось открыть файл" << inputPath;
+            return 1;
+        }
 
-/*
-    // Чтение входного файла
-    qDebug() << "Введите путь к входному файлу:\n";
-    QString inputPath;
-    QTextStream in(stdin);
-    inputPath = in.readLine();
+        QTextStream inputStream(&inputFile);
+        while (!inputStream.atEnd()) {
+            lines.append(inputStream.readLine());
+        }
+        inputFile.close();
 
-    QStringList lines;
-    QFile inputFile(inputPath);
-    if (!inputFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        qDebug() << QString("Ошибка: не удалось открыть файл ") << inputPath << "\n";
-        return 1;
+        // Построение матрицы смежности
+        QMap<char, QMap<char, int>> siegeMatrix;
+        if (!definingGraphBysiegeMatrix(siegeMatrix, lines, errors)) {
+            qDebug() << "Ошибки при построении графа:";
+            for (const Error& error : errors) {
+                qDebug() << error.stringValue;
+            }
+            return 1;
+        }
+
+        // Получаем начальную и конечную вершины из последней строки
+        if (lines.isEmpty()) {
+            qDebug() << "Файл пуст";
+            return 1;
+        }
+
+        QString lastLine = lines.last().trimmed();
+        QStringList vertices = lastLine.split(' ', Qt::SkipEmptyParts);
+        if (vertices.size() < 2) {
+            qDebug() << "Не указаны начальная и конечная вершины";
+            return 1;
+        }
+
+        QVector<char> path = {vertices[0].at(0).toUpper().toLatin1(),
+                              vertices[1].at(0).toUpper().toLatin1()};
+
+        // Поиск кратчайшего пути
+        int distance = algoritmDejcstra(siegeMatrix, path);
+        if (distance == -1) {
+            qDebug() << "Путь между вершинами не найден";
+            return 1;
+        }
+
+        // Сохранение результата
+        QString dotCode = createDotWithPath(siegeMatrix, distance, path);
+        QFile outputFile(outputPath);
+        if (!outputFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            qDebug() << "Ошибка: не удалось создать файл" << outputPath;
+            return 1;
+        }
+
+        QTextStream outputStream(&outputFile);
+        outputStream.setCodec("UTF-8");
+        outputStream << dotCode;
+        outputFile.close();
+
+        qDebug() << "Результаты работы программы:";
+        qDebug() << "Кратчайший путь сохранен в:" << outputPath;
+        qDebug() << "Расстояние:" << distance;
+        qDebug() << "Путь:" << path;
+
+        // Подготовка аргументов для тестов
+        int test_argc = 1;
+        char* test_argv[] = { argv[0] };
+
+        qDebug() << "\nЗапуск модульных тестов...";
+
+        QVector<QObject*> tests = {
+            new TestDijkstraAlgorithm,
+            new TestCreateDotWithPath,
+            new TestGraphParser
+        };
+
+        int failedTests = 0;
+        for (QObject* test : tests) {
+            qDebug() << "\n----- Запуск" << test->metaObject()->className() << "-----";
+            failedTests += QTest::qExec(test, test_argc, test_argv);
+            delete test;
+        }
+
+        qDebug() << "\nТесты завершены. Количество ошибок:" << failedTests;
+        return failedTests > 0 ? 1 : 0;
     }
 
-    // Чтение графа
-    QTextStream inputStream(&inputFile);
-    while (!inputStream.atEnd()) {
-        lines.append(inputStream.readLine());
-    }
-    inputFile.close();
-
-    // Построение матрицы смежности
-    QMap<char, QMap<char, int>> siegeMatrix;
-    if (!definingGraphBysiegeMatrix(siegeMatrix, lines, errors)) {
-        qDebug() << QString("Ошибка при построении матрицы смежности\n");
-        return 1;
+    // Режим запуска только тестов
+    if (argc == 1) {
+        return QTest::qExec(new TestDijkstraAlgorithm, argc, argv) |
+               QTest::qExec(new TestCreateDotWithPath, argc, argv) |
+               QTest::qExec(new TestGraphParser, argc, argv);
     }
 
-    // Ввод вершин для поиска пути
-    qDebug() << QString("Введите начальную и конечную вершины (через пробел): ") << flush;
-    QStringList vertices = in.readLine().split(' ');
-    if (vertices.size() < 2) {
-        qDebug() << QString("Необходимо указать две вершины\n");
-        return 1;
-    }
-
-    QVector<char> path = {vertices[0].at(0).toLatin1(), vertices[1].at(0).toLatin1()};
-    int distance = algoritmDejcstra(siegeMatrix, path);
-
-    if (distance == -1) {
-        qDebug() << QString("Путь между вершинами не найден\n");
-        return 1;
-    }
-
-    // Генерация DOT-кода с путём
-    QString dotCode = createDotWithPath(siegeMatrix, distance, path);
-
-    // Сохранение в выходной файл
-    qDebug() << QString("Введите путь для сохранения выходного DOT-файла: ") << flush;
-    QString outputPath = in.readLine();
-
-    QFile outputFile(outputPath);
-    if (!outputFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        qDebug() << QString("Ошибка: не удалось создать файл ") << outputPath << "\n";
-        return 1;
-    }
-
-    QTextStream outputStream(&outputFile);
-    outputStream << dotCode;
-    outputFile.close();
-
-    qDebug() << QString("Граф с выделенным путём успешно сохранён в ") << outputPath << "\n";
-    qDebug() << QString("Кратчайшее расстояние: ") << distance << "\n";
-    qDebug() << QString("Путь: ");
-    for (char vertex : path) {
-        qDebug() << vertex << " ";
-    }
-    qDebug() << "\n";
-*/
-    //Вернуть успешность завершения функции
-    QTest::qExec(new TestDijkstraAlgorithm,argc,argv);
-    QTest::qExec(new TestCreateDotWithPath,argc,argv);
-    QTest::qExec(new TestGraphParser,argc,argv);
-
-    return 0;
-
-
+    qDebug() << "Использование:";
+    qDebug() << "Для работы с файлами:" << argv[0] << "input.dot output.dot";
+    return 1;
 }
 
 
@@ -163,7 +191,7 @@ bool definingGraphBysiegeMatrix(QMap<char, QMap<char, int>>& siegeMatrix,
         }
 
         hasEdges = true;
-        QRegExp rx("([A-Za-z0-9]+)\\s*->\\s*([A-Za-z0-9]+)\\s*(?:\\[label\\s*=\\s*(\\d+)\\])?;?");
+        QRegExp rx("([A-Za-z0-9]+)\\s*->\\s*([A-Za-z0-9]+)\\s*(?:\\[label\\s*=\\s*([^\\]]+)\\])?;?");
         int pos = 0;
 
         while ((pos = rx.indexIn(line, pos)) != -1) {
@@ -196,7 +224,7 @@ bool definingGraphBysiegeMatrix(QMap<char, QMap<char, int>>& siegeMatrix,
                     errPos
                     ));
                 pos += rx.matchedLength();
-                continue;
+                //continue;
             }
 
             char from = fromStr[0].toUpper().toLatin1();
