@@ -12,6 +12,8 @@
 #include <limits>
 #include <algorithm>
 #include <QtTest/QtTest>
+#include <QTextCodec>
+#include <QRegExp>
 
 
 enum type_error {
@@ -34,6 +36,7 @@ struct Error
     enum type_error type;
     QString stringValue;
     int position_error;
+    int lineNumber;
 
 
     Error(type_error t, const QString& msg, int pos) :
