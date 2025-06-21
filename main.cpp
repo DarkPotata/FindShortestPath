@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
         }
 
         QString lastLine = lines.last().trimmed();
-        QStringList vertices = lastLine.split(' ', Qt::SkipEmptyParts);
+        QStringList vertices = lastLine.split(' ', QString::SplitBehavior::SkipEmptyParts);
         if (vertices.size() < 2) {
             qDebug() << "Не указаны начальная и конечная вершины";
             return 1;
